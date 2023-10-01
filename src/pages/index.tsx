@@ -322,7 +322,9 @@ export default function Home() {
     document.body.removeChild(el);
   };
 
-  function Modal(onReset: () => void) {
+
+
+  function Modal({onReset, onClose}: {onReset: () => void, onClose: () => void}) {
     const handleCopy = () => {
       const resultString = generateResultString(); // get the result string
       copyStringToClipboard(resultString); // copy to clipboard
