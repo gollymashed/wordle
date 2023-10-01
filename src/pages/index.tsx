@@ -4,15 +4,24 @@ import Head from "next/head";
 
 export default function Home() {
   // Grid state
+  enum LetterState {
+    NONE = 0,
+    INCORRECT = 1,
+    POSITION = 2,
+    CORRECT = 3,
+  }
   type WordleLetter = {
     letter: string;
-    state: "none" | "correct" | "incorrect" | "wrong-position";
+    state: LetterState;
   };
   const NUM_COLS = 5;
   const NUM_ROWS = 6;
   const [grid, setGrid] = useState<WordleLetter[][]>(
     Array.from({ length: NUM_ROWS }, () =>
-      Array.from({ length: NUM_COLS }, () => ({ letter: "", state: "none" })),
+      Array.from({ length: NUM_COLS }, () => ({
+        letter: "",
+        state: LetterState.NONE,
+      })),
     ),
   );
 
@@ -23,6 +32,7 @@ export default function Home() {
 
   const [usedLetters, setUsedLetters] = useState<Set<string>>(new Set());
   const [submittedGuesses, setSubmittedGuesses] = useState<WordleLetter[]>([]);
+  const [completed, setCompleted] = useState<boolean>(false);
 
   const [cursor, setCursor] = useState<{ row: number; col: number }>({
     row: 0,
@@ -73,7 +83,7 @@ export default function Home() {
 
           newRow[column] = {
             letter: value,
-            state: newRow[column]?.state || "none",
+            state: newRow[column]?.state || LetterState.NONE,
           };
           newGrid[row] = newRow;
 
@@ -163,7 +173,49 @@ export default function Home() {
 
     if (currentGuess.length === 5 && words.has(currentGuess.toLowerCase())) {
       setSubmittedGuesses((prev) => [...prev, ...grid[cursor.row]!]);
-      setCursor({ row: cursor.row + 1, col: 0 });
+      setGrid((prevGrid) => {
+        const newGrid = [...prevGrid];
+        const newRow = [...(newGrid[cursor.row] || [])];
+
+        newRow.forEach((wordleLetter, idx) => {
+          const letter = wordleLetter.letter.toLowerCase();
+
+          if (selectedWord[idx] === letter) {
+            wordleLetter.state = LetterState.CORRECT;
+          } else if (selectedWord.includes(letter)) {
+            const selectedWordArr = Array.from(selectedWord);
+
+            // Check if the letter appears more times in the selected word than it does
+            // in the correct position in the current row.
+            const isInMorePositions =
+              selectedWordArr.filter(
+                (swLetter, swIdx) =>
+                  swLetter === letter &&
+                  newRow[swIdx]?.state !== LetterState.CORRECT,
+              ).length > 0;
+
+            wordleLetter.state = isInMorePositions
+              ? LetterState.POSITION
+              : LetterState.INCORRECT;
+          } else {
+            wordleLetter.state = LetterState.INCORRECT;
+          }
+        });
+
+        newGrid[cursor.row] = newRow;
+
+        return newGrid;
+      });
+
+      const isCompleted = grid[cursor.row]!.every(
+        (letter) => letter.state === LetterState.CORRECT,
+      );
+
+      setCompleted(isCompleted);
+
+      if (!isCompleted) {
+        setCursor({ row: cursor.row + 1, col: 0 });
+      }
     } else {
       setGrid((prevGrid) => {
         const newGrid = [...prevGrid];
@@ -172,7 +224,7 @@ export default function Home() {
         newRow.forEach((letter, index) => {
           newRow[index] = {
             letter: "",
-            state: "none",
+            state: LetterState.NONE,
           };
         });
         newGrid[cursor.row] = newRow;
@@ -182,6 +234,35 @@ export default function Home() {
       setCursor({ row: cursor.row, col: 0 });
     }
   }, [cursor, grid, words]);
+
+  function getBgClassByState(state: LetterState) {
+    switch (state) {
+      case LetterState.NONE:
+        return "bg-purple-500";
+      case LetterState.CORRECT:
+        return "bg-green-500";
+      case LetterState.POSITION:
+        return "bg-yellow-500";
+      case LetterState.INCORRECT:
+        return "bg-gray-500";
+      default:
+        return "";
+    }
+  }
+
+  function findHighestStateForLetter(letter: string) {
+    let highestState = LetterState.NONE;
+    for (let row of grid) {
+      for (let cell of row) {
+        if (cell.letter.toLowerCase() === letter.toLowerCase()) {
+          if (cell.state > highestState) {
+            highestState = cell.state;
+          }
+        }
+      }
+    }
+    return highestState;
+  }
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error occurred while fetching words.</p>;
@@ -206,7 +287,9 @@ export default function Home() {
                   ref={(el) =>
                     (inputsRef.current[rowIdx * grid[0]!.length + colIdx] = el)
                   }
-                  className="h-10 w-10 text-center"
+                  className={`h-10 w-10 text-center ${getBgClassByState(
+                    cell.state,
+                  )}`}
                   maxLength={1}
                   value={cell.letter}
                   onChange={(e) => handleChange(rowIdx, colIdx, e.target.value)}
@@ -219,7 +302,7 @@ export default function Home() {
               {"QWERTYUIOP".split("").map((letter) => (
                 <button
                   key={letter}
-                  className="key"
+                  className={`key ${getBgClassByState(findHighestStateForLetter(letter))}`}
                   onClick={() => handleLetterClick(letter)}
                 >
                   {letter}
@@ -230,7 +313,7 @@ export default function Home() {
               {"ASDFGHJKL".split("").map((letter) => (
                 <button
                   key={letter}
-                  className="key"
+                  className={`key ${getBgClassByState(findHighestStateForLetter(letter))}`}
                   onClick={() => handleLetterClick(letter)}
                 >
                   {letter}
@@ -238,20 +321,20 @@ export default function Home() {
               ))}
             </div>
             <div className="keyboard-row">
-              <button className="key enter-key" onClick={() => handleEnter()}>
+              <button className="key enter-key bg-purple-500" onClick={() => handleEnter()}>
                 ↵
               </button>
               {"ZXCVBNM".split("").map((letter) => (
                 <button
                   key={letter}
-                  className="key"
+                  className={`key ${getBgClassByState(findHighestStateForLetter(letter))}`}
                   onClick={() => handleLetterClick(letter)}
                 >
                   {letter}
                 </button>
               ))}
               <button
-                className="key backspace-key"
+                className="key backspace-key bg-purple-500"
                 onClick={() => handleBackspace()}
               >
                 &larr;

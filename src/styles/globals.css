@@ -9,7 +9,6 @@
   line-height: 2rem;
   text-align: center;
   margin: 0.1rem;
-  background-color: #e0e0e0;
   cursor: pointer;
 }
 
@@ -17,19 +16,7 @@
   width: 3rem; /* 1.5x width */
 }
 
-.used-key {
-  background-color: #c0c0c0; /* or whatever color you prefer for used keys */
-  cursor: not-allowed;
-}
-
-.correct-letter {
-  background-color: green;
-}
-
-.incorrect-letter {
-  background-color: darkgrey;
-}
-
-.wrong-position-letter {
-  background-color: orange;
+.keyboard-row {
+  display: flex;
+  justify-content: center;
 }
