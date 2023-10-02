@@ -30,7 +30,6 @@ export default function Home() {
   const [words, setWords] = useState<Set<string>>(new Set());
   const [selectedWord, setSelectedWord] = useState<string>("");
 
-  const [usedLetters, setUsedLetters] = useState<Set<string>>(new Set());
   const [completed, setCompleted] = useState<boolean>(false);
   const [isCompleteModalVisible, setCompleteModalVisible] = useState(false);
 
@@ -40,18 +39,18 @@ export default function Home() {
 
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => {
-        setWords(new Set(wordleWords));
-        setRandomWord(wordleAnswers);
-  }, []);
-
   const setRandomWord = useCallback(
     (wordsList: string[]) => {
       const randomIndex = Math.floor(Math.random() * wordsList.length);
       setSelectedWord(wordsList[randomIndex] ?? "");
     },
-    [words],
+    [],
   );
+
+  useEffect(() => {
+    setWords(new Set(wordleWords));
+    setRandomWord(wordleAnswers);
+}, [setRandomWord]);
 
   const handleChange = useCallback(
     (row: number, column: number, value: string) => {
@@ -60,14 +59,14 @@ export default function Home() {
           row >= 0 &&
           row < prevGrid.length &&
           column >= 0 &&
-          column < (prevGrid[row]?.length || 0)
+          column < (prevGrid[row]?.length ?? 0)
         ) {
           const newGrid = [...prevGrid];
-          const newRow = [...(newGrid[row] || [])];
+          const newRow = [...(newGrid[row] ?? [])];
 
           newRow[column] = {
             letter: value,
-            state: newRow[column]?.state || LetterState.NONE,
+            state: newRow[column]?.state ?? LetterState.NONE,
           };
           newGrid[row] = newRow;
 
@@ -78,7 +77,7 @@ export default function Home() {
         return prevGrid;
       });
     },
-    [],
+    [LetterState],
   );
 
   const insertLetterAndMoveCursor = useCallback(
@@ -90,7 +89,7 @@ export default function Home() {
       ) {
         handleChange(row, col, letter.toUpperCase());
 
-        if (col < grid[0]!.length - 1 || row === grid.length - 1) {
+        if (col < grid[0]!.length - 1 ?? row === grid.length - 1) {
           setCursor({ row, col: col < grid[0]!.length - 1 ? col + 1 : col });
         }
       }
@@ -112,7 +111,7 @@ export default function Home() {
       handleChange(row, column - 1, "");
       setCursor({ row, col: column - 1 });
     }
-  }, [cursor, handleChange, grid]);
+  }, [cursor, handleChange, grid, completed]);
 
   const handleEnter = useCallback(() => {
     if (completed) return;
@@ -126,7 +125,7 @@ export default function Home() {
     ) {
       handleGuessSubmission();
     }
-  }, [cursor, grid]);
+  }, [cursor, grid, completed]);
 
   const handleLetterClick = useCallback(
     (letter: string) => {
@@ -157,20 +156,20 @@ export default function Home() {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [cursor, grid, handleChange, handleEnter, handleBackspace]);
-
-  useEffect(() => {
-    focusCursor();
-  }, [cursor]);
-
-  useEffect(() => {
-    focusCursor();
-  }, []);
+  }, [cursor, grid, handleChange, handleEnter, handleBackspace, insertLetterAndMoveCursor]);
 
   const focusCursor = useCallback(() => {
     const { row, col } = cursor;
     inputsRef.current[row * grid[0]!.length + col]?.focus();
   }, [cursor]);
+
+  useEffect(() => {
+    focusCursor();
+  }, [cursor, focusCursor]);
+
+  useEffect(() => {
+    focusCursor();
+  }, [focusCursor]);
 
   const handleGuessSubmission = useCallback(() => {
     const currentGuess = grid[cursor.row]!.map((letter) => letter.letter).join(
@@ -180,7 +179,7 @@ export default function Home() {
     if (currentGuess.length === 5 && words.has(currentGuess.toLowerCase())) {
       setGrid((prevGrid) => {
         const newGrid = [...prevGrid];
-        const newRow = [...(newGrid[cursor.row] || [])];
+        const newRow = [...(newGrid[cursor.row] ?? [])];
 
         newRow.forEach((wordleLetter, idx) => {
           const letter = wordleLetter.letter.toLowerCase();
@@ -224,7 +223,7 @@ export default function Home() {
     } else {
       setGrid((prevGrid) => {
         const newGrid = [...prevGrid];
-        const newRow = [...(newGrid[cursor.row] || [])];
+        const newRow = [...(newGrid[cursor.row] ?? [])];
 
         newRow.forEach((letter, index) => {
           newRow[index] = {
