@@ -288,7 +288,7 @@ export default function Home() {
 
   const generateResultString = () => {
     const score = cursor.row + 1;
-    let resultString = `Wordle ∞ ${score}/6\n`; // replace XXX and X/X with actual game number and score.
+    let resultString = `Wordle ∞ ${score}/6\n\n`; // replace XXX and X/X with actual game number and score.
     for (let i = 0; i < score; i++) {
       if (grid[i] === undefined) break;
       let rowString = "";
