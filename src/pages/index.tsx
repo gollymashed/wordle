@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import wordleWords from '../content/wordleWords';
+import wordleAnswers from '../content/wordleAnswers';
 
 import Head from "next/head";
 
@@ -27,8 +29,6 @@ export default function Home() {
 
   const [words, setWords] = useState<Set<string>>(new Set());
   const [selectedWord, setSelectedWord] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<boolean>(false);
 
   const [usedLetters, setUsedLetters] = useState<Set<string>>(new Set());
   const [completed, setCompleted] = useState<boolean>(false);
@@ -41,29 +41,8 @@ export default function Home() {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    const fetchWords = async () => {
-      try {
-        const response = await fetch(
-          "https://raw.githubusercontent.com/tabatkins/wordle-list/main/words",
-        );
-        if (!response.ok)
-          throw new Error("Network response was not ok" + response.statusText);
-        const text = await response.text();
-        const wordsList = text.split("\n").filter(Boolean); // to remove any empty string if exists
-        setWords(new Set(wordsList));
-        setRandomWord(wordsList);
-      } catch (error) {
-        console.error(
-          "There has been a problem with your fetch operation:",
-          error,
-        );
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void fetchWords();
+        setWords(new Set(wordleWords));
+        setRandomWord(wordleAnswers);
   }, []);
 
   const setRandomWord = useCallback(
@@ -184,6 +163,10 @@ export default function Home() {
     focusCursor();
   }, [cursor]);
 
+  useEffect(() => {
+    focusCursor();
+  }, []);
+
   const focusCursor = useCallback(() => {
     const { row, col } = cursor;
     inputsRef.current[row * grid[0]!.length + col]?.focus();
@@ -260,7 +243,7 @@ export default function Home() {
   function getBgClassByState(state: LetterState) {
     switch (state) {
       case LetterState.NONE:
-        return "bg-purple-500";
+        return "bg-[#CDACFA]";
       case LetterState.CORRECT:
         return "bg-green-500";
       case LetterState.POSITION:
@@ -337,9 +320,9 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 top-0 z-50 flex items-center justify-center"
       >
         <div className="relative max-h-full w-full max-w-2xl">
-          <div className="relative rounded-lg bg-white shadow dark:bg-gray-700">
-            <div className="flex items-start justify-between rounded-t border-b p-4 dark:border-gray-600">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <div className="relative rounded-lg shadow bg-[#2D2F52]">
+            <div className="flex items-start justify-between rounded-t border-b p-4 border-gray-600">
+              <h3 className="text-xl font-semibold text-[#D9D9D9]">
                 Game Completed!
               </h3>
               <button
@@ -366,28 +349,28 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-col items-center justify-center space-y-6 p-6">
-              <p className="text-center text-base leading-relaxed text-gray-500 dark:text-gray-400">
+              <p className="text-center text-base leading-relaxed text-[#D9D9D9]">
                 You got it! Would you like to play again?
               </p>
               <p
-                className="text-center text-base text-gray-500 dark:text-gray-400"
+                className="text-center text-base text-[#D9D9D9]"
                 style={{ whiteSpace: "pre-line" }}
               >
                 {generateResultString()}
               </p>
             </div>
 
-            <div className="flex items-center justify-center space-x-2 rounded-b border-t border-gray-200 p-6 dark:border-gray-600">
+            <div className="flex items-center justify-center space-x-2 rounded-b border-t p-6 border-gray-600">
               <button
                 type="button"
                 onClick={handleCopy}
-                className="rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
               >
                 Copy Result
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
                 onClick={onReset}
               >
                 Reset Game
@@ -402,13 +385,10 @@ export default function Home() {
   const resetGame = useCallback(() => {
     setGrid(INITIAL_GRID);
     setCursor(INITIAL_CURSOR);
-    setRandomWord(Array.from(words));
+    setRandomWord(wordleAnswers);
     setCompleted(false);
     setCompleteModalVisible(false);
   }, []);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error occurred while fetching words.</p>;
 
   return (
     <>
@@ -418,12 +398,12 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main
-        className="justify-top flex min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c]"
+        className="justify-top flex min-h-screen flex-col items-center bg-gradient-to-b from-[#0D0707] to-[#15162c]"
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
-          <h1 className="pb-10 text-xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-            Wordle Unlimited
+          <h1 className="pb-10 text-2xl font-bold font-mono tracking-tight text-[#7729FF]">
+            wordle ∞
           </h1>
           <div className="grid grid-cols-5 grid-rows-6 gap-4">
             {grid.map((row, rowIdx) =>
@@ -478,7 +458,7 @@ export default function Home() {
             </div>
             <div className="keyboard-row">
               <button
-                className="key enter-key bg-purple-500"
+                className="key enter-key bg-[#7729FF]"
                 onClick={() => handleEnter()}
               >
                 ↵
@@ -495,7 +475,7 @@ export default function Home() {
                 </button>
               ))}
               <button
-                className="key backspace-key bg-purple-500"
+                className="key backspace-key bg-[#7729FF]"
                 onClick={() => handleBackspace()}
               >
                 &larr;
