@@ -18,10 +18,17 @@
   src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
 }
 
+.cell {
+  display: grid;
+  width:3rem;
+  height:3rem;
+  text-align: center;
+}
+
 .key {
   display: inline-block;
   width: 2rem;
-  height: 2rem;
+  height: 3rem;
   line-height: 2rem;
   text-align: center;
   margin: 0.1rem;
@@ -32,7 +39,15 @@
   width: 3rem; /* 1.5x width */
 }
 
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  bg-color: #fff;
+}
+
 .keyboard-row {
   display: flex;
+  gap:0.1rem;
   justify-content: center;
 }

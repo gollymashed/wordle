@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import wordleWords from '../content/wordleWords';
-import wordleAnswers from '../content/wordleAnswers';
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/router";
+import wordleWords from "../content/wordleWords";
+import wordleAnswers from "../content/wordleAnswers";
 
 import Head from "next/head";
 
 export default function Home() {
+  const router = useRouter();
   // Grid state
   enum LetterState {
     NONE = 0,
@@ -24,10 +26,10 @@ export default function Home() {
       state: LetterState.NONE,
     })),
   );
-  const INITIAL_CURSOR = { row: 0, col: 0 };
+  const INITIAL_CURSOR = useMemo(() => ({ row: 0, col: 0 }), []);
+
   const [grid, setGrid] = useState<WordleLetter[][]>(INITIAL_GRID);
 
-  const [words, setWords] = useState<Set<string>>(new Set());
   const [selectedWord, setSelectedWord] = useState<string>("");
 
   const [completed, setCompleted] = useState<boolean>(false);
@@ -39,18 +41,24 @@ export default function Home() {
 
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  const setRandomWord = useCallback(
-    (wordsList: string[]) => {
-      const randomIndex = Math.floor(Math.random() * wordsList.length);
-      setSelectedWord(wordsList[randomIndex] ?? "");
-    },
-    [],
-  );
+  const setRandomWord = useCallback((wordsList: string[]) => {
+    const randomIndex = Math.floor(Math.random() * wordsList.length);
+    setSelectedWord(wordsList[randomIndex] ?? "");
+  }, []);
+
+  const words = useRef(new Set(wordleWords));
 
   useEffect(() => {
-    setWords(new Set(wordleWords));
+    const obfuscatedWord = router.query.challenge as string;
+    if (obfuscatedWord) {
+      const decodedWord = atob(obfuscatedWord);
+      if (words.current.has(decodedWord)) {
+        setSelectedWord(decodedWord);
+        return;
+      }
+    }
     setRandomWord(wordleAnswers);
-}, [setRandomWord]);
+  }, [router.query.challenge, setRandomWord, setSelectedWord]); // Dependency on wordsRef is not needed as it does not cause re-renders
 
   const handleChange = useCallback(
     (row: number, column: number, value: string) => {
@@ -118,7 +126,10 @@ export default function Home() {
       "",
     );
 
-    if (currentGuess.length === 5 && words.has(currentGuess.toLowerCase())) {
+    if (
+      currentGuess.length === 5 &&
+      words.current.has(currentGuess.toLowerCase())
+    ) {
       setGrid((prevGrid) => {
         const newGrid = [...prevGrid];
         const newRow = [...(newGrid[cursor.row] ?? [])];
@@ -179,7 +190,7 @@ export default function Home() {
       });
       setCursor({ row: cursor.row, col: 0 });
     }
-  }, [cursor, grid, words, LetterState]);
+  }, [cursor, grid, words, LetterState, selectedWord]);
 
   const handleEnter = useCallback(() => {
     if (completed) return;
@@ -224,7 +235,14 @@ export default function Home() {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [cursor, grid, handleChange, handleEnter, handleBackspace, insertLetterAndMoveCursor]);
+  }, [
+    cursor,
+    grid,
+    handleChange,
+    handleEnter,
+    handleBackspace,
+    insertLetterAndMoveCursor,
+  ]);
 
   const focusCursor = useCallback(() => {
     const { row, col } = cursor;
@@ -270,7 +288,7 @@ export default function Home() {
 
   const generateResultString = () => {
     const score = cursor.row + 1;
-    let resultString = `Wordle Unlimited ${score}/6\n\n`; // replace XXX and X/X with actual game number and score.
+    let resultString = `Wordle ∞ ${score}/6\n`; // replace XXX and X/X with actual game number and score.
     for (let i = 0; i < score; i++) {
       if (grid[i] === undefined) break;
       let rowString = "";
@@ -304,12 +322,24 @@ export default function Home() {
     document.body.removeChild(el);
   };
 
+  const generateChallengeLink = () => {
+    const obfuscatedWord = btoa(selectedWord);
+    const url = `${window.location.origin}${window.location.pathname}?challenge=${obfuscatedWord}`;
+    console.log(url);
+    return url;
+  };
 
-
-  function Modal({onReset}: {onReset: () => void, onClose: () => void}) {
-    const handleCopy = () => {
-      const resultString = generateResultString(); // get the result string
+  function Modal({ onReset }: { onReset: () => void; onClose: () => void }) {
+    const handleCopyResult = () => {
+      const url = generateChallengeLink();
+      const resultString =
+        generateResultString() + "\n" + "Try and beat my score: " + url;
       copyStringToClipboard(resultString); // copy to clipboard
+    };
+
+    const handleCopyChallengeLink = () => {
+      const url = generateChallengeLink();
+      copyStringToClipboard(url); // copy to clipboard
     };
 
     return (
@@ -318,9 +348,9 @@ export default function Home() {
         aria-hidden="false"
         className="fixed bottom-0 left-0 right-0 top-0 z-50 flex items-center justify-center"
       >
-        <div className="relative max-h-full w-full max-w-2xl">
-          <div className="relative rounded-lg shadow bg-[#2D2F52]">
-            <div className="flex items-start justify-between rounded-t border-b p-4 border-gray-600">
+        <div className="relative max-h-full w-full max-w-2xl px-4">
+          <div className="relative rounded-lg bg-[#2D2F52] shadow">
+            <div className="flex items-start justify-between rounded-t border-b border-gray-600 p-4">
               <h3 className="text-xl font-semibold text-[#D9D9D9]">
                 Game Completed!
               </h3>
@@ -348,25 +378,39 @@ export default function Home() {
               </button>
             </div>
             <div className="flex flex-col items-center justify-center space-y-6 p-6">
-              <p className="text-center text-base leading-relaxed text-[#D9D9D9]">
-                You got it! Would you like to play again?
+              <p className="text-center text-base leading-relaxed text-[#efefef]">
+                You got it!
+                <br />
+                Would you like to play again?
               </p>
               <p
-                className="text-center text-base text-[#D9D9D9]"
+                className="text-center text-base text-[#efefef]"
                 style={{ whiteSpace: "pre-line" }}
               >
                 {generateResultString()}
               </p>
+              <p
+                className="cursor-copy text-center text-xs text-[#c0c0c0] hover:text-[#939393]"
+                onClick={handleCopyChallengeLink}
+              >
+                {generateChallengeLink()}
+              </p>
             </div>
 
-            <div className="flex items-center justify-center space-x-2 rounded-b border-t p-6 border-gray-600">
+            <div className="flex items-center justify-center space-x-2 rounded-b border-t border-gray-600 p-6">
               <button
                 type="button"
-                onClick={handleCopy}
+                onClick={handleCopyResult}
                 className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
               >
                 Copy Result
               </button>
+              {/* <button
+                onClick={handleCopyChallengeLink}
+                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
+              >
+                Copy Challenge Link
+              </button> */}
               <button
                 type="button"
                 className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
@@ -392,19 +436,19 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Wordle Unlimited</title>
-        <meta name="description" content="Free unlimited wordle." />
+        <title>Wordle ∞</title>
+        <meta name="description" content="Free ∞ wordle." />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main
         className="justify-top flex min-h-screen flex-col items-center bg-gradient-to-b from-[#0D0707] to-[#15162c]"
         onMouseDown={(e) => e.preventDefault()}
       >
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
-          <h1 className="pb-10 text-2xl font-bold font-mono tracking-tight text-[#7729FF]">
+        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-10 ">
+          <h1 className="font-mono text-2xl font-bold tracking-tight text-[#7729FF]">
             wordle ∞
           </h1>
-          <div className="grid grid-cols-5 grid-rows-6 gap-4">
+          <div className="grid grid-cols-5 grid-rows-6 gap-2">
             {grid.map((row, rowIdx) =>
               row.map((cell, colIdx) => (
                 <input
@@ -412,9 +456,7 @@ export default function Home() {
                   ref={(el) =>
                     (inputsRef.current[rowIdx * grid[0]!.length + colIdx] = el)
                   }
-                  className={`h-10 w-10 text-center ${getBgClassByState(
-                    cell.state,
-                  )}`}
+                  className={`cell ${getBgClassByState(cell.state)}`}
                   maxLength={1}
                   value={cell.letter}
                   onChange={(e) => handleChange(rowIdx, colIdx, e.target.value)}
