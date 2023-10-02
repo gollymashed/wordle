@@ -113,64 +113,6 @@ export default function Home() {
     }
   }, [cursor, handleChange, grid, completed]);
 
-  const handleEnter = useCallback(() => {
-    if (completed) return;
-
-    const { row, col: column } = cursor;
-
-    if (
-      column === grid[0]!.length - 1 &&
-      row < grid.length - 1 &&
-      grid[row]![column]!.letter !== ""
-    ) {
-      handleGuessSubmission();
-    }
-  }, [cursor, grid, completed]);
-
-  const handleLetterClick = useCallback(
-    (letter: string) => {
-      const { row, col: column } = cursor;
-      if (row < grid.length && column < grid[0]!.length) {
-        insertLetterAndMoveCursor(row, column, letter);
-      }
-    },
-    [cursor, grid, insertLetterAndMoveCursor],
-  );
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
-
-      insertLetterAndMoveCursor(cursor.row, cursor.col, e.key);
-
-      if (e.key === "Enter") {
-        handleEnter();
-      }
-
-      if (e.key === "Backspace") {
-        handleBackspace();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [cursor, grid, handleChange, handleEnter, handleBackspace, insertLetterAndMoveCursor]);
-
-  const focusCursor = useCallback(() => {
-    const { row, col } = cursor;
-    inputsRef.current[row * grid[0]!.length + col]?.focus();
-  }, [cursor]);
-
-  useEffect(() => {
-    focusCursor();
-  }, [cursor, focusCursor]);
-
-  useEffect(() => {
-    focusCursor();
-  }, [focusCursor]);
-
   const handleGuessSubmission = useCallback(() => {
     const currentGuess = grid[cursor.row]!.map((letter) => letter.letter).join(
       "",
@@ -237,7 +179,65 @@ export default function Home() {
       });
       setCursor({ row: cursor.row, col: 0 });
     }
-  }, [cursor, grid, words]);
+  }, [cursor, grid, words, LetterState]);
+
+  const handleEnter = useCallback(() => {
+    if (completed) return;
+
+    const { row, col: column } = cursor;
+
+    if (
+      column === grid[0]!.length - 1 &&
+      row < grid.length - 1 &&
+      grid[row]![column]!.letter !== ""
+    ) {
+      handleGuessSubmission();
+    }
+  }, [cursor, grid, completed, handleGuessSubmission]);
+
+  const handleLetterClick = useCallback(
+    (letter: string) => {
+      const { row, col: column } = cursor;
+      if (row < grid.length && column < grid[0]!.length) {
+        insertLetterAndMoveCursor(row, column, letter);
+      }
+    },
+    [cursor, grid, insertLetterAndMoveCursor],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+
+      insertLetterAndMoveCursor(cursor.row, cursor.col, e.key);
+
+      if (e.key === "Enter") {
+        handleEnter();
+      }
+
+      if (e.key === "Backspace") {
+        handleBackspace();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [cursor, grid, handleChange, handleEnter, handleBackspace, insertLetterAndMoveCursor]);
+
+  const focusCursor = useCallback(() => {
+    const { row, col } = cursor;
+    inputsRef.current[row * grid[0]!.length + col]?.focus();
+  }, [cursor, grid]);
+
+  useEffect(() => {
+    focusCursor();
+  }, [cursor, focusCursor]);
+
+  useEffect(() => {
+    focusCursor();
+  }, [focusCursor]);
 
   function getBgClassByState(state: LetterState) {
     switch (state) {
@@ -256,8 +256,8 @@ export default function Home() {
 
   function findHighestStateForLetter(letter: string) {
     let highestState = LetterState.NONE;
-    for (let row of grid) {
-      for (let cell of row) {
+    for (const row of grid) {
+      for (const cell of row) {
         if (cell.letter.toLowerCase() === letter.toLowerCase()) {
           if (cell.state > highestState) {
             highestState = cell.state;
@@ -306,7 +306,7 @@ export default function Home() {
 
 
 
-  function Modal({onReset, onClose}: {onReset: () => void, onClose: () => void}) {
+  function Modal({onReset}: {onReset: () => void, onClose: () => void}) {
     const handleCopy = () => {
       const resultString = generateResultString(); // get the result string
       copyStringToClipboard(resultString); // copy to clipboard
@@ -387,7 +387,7 @@ export default function Home() {
     setRandomWord(wordleAnswers);
     setCompleted(false);
     setCompleteModalVisible(false);
-  }, []);
+  }, [INITIAL_GRID, INITIAL_CURSOR, setRandomWord]);
 
   return (
     <>
