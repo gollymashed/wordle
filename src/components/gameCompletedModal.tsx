@@ -12,12 +12,14 @@ export function Modal({
   selectedWord,
   grid,
   score,
+  success,
 }: {
   onReset: () => void;
   onClose: () => void;
   selectedWord: string;
   grid: WordleLetter[][];
   score: number;
+  success: boolean;
 }) {
   const handleCopyResult = () => {
     const url = generateChallengeLink(selectedWord);
@@ -41,14 +43,14 @@ export function Modal({
       className="fixed bottom-0 left-0 right-0 top-0 z-50 flex items-center justify-center"
     >
       <div className="relative max-h-full w-full max-w-2xl px-4">
-        <div className="relative rounded-lg bg-[#2D2F52] shadow">
-          <div className="flex items-start justify-between rounded-t border-b border-gray-600 p-4">
+        <div className="relative rounded-lg bg-dark_accent shadow">
+          <div className="border-gray-600 flex items-start justify-between rounded-t border-b p-4">
             <h3 className="text-xl font-semibold text-[#D9D9D9]">
               Game Completed!
             </h3>
             <button
               type="button"
-              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white"
+              className="bg-transparent text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white ml-auto inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm"
               onClick={onClose}
             >
               <svg
@@ -71,9 +73,12 @@ export function Modal({
           </div>
           <div className="flex flex-col items-center justify-center space-y-6 p-6">
             <p className="text-center text-base leading-relaxed text-[#efefef]">
-              You got it!
+              {success ? "You got it!" : "Better luck next time!"}
               <br />
               Would you like to play again?
+            </p>
+            <p className="text-[#efefef] rounded-2xl px-5 py-2.5 text-center text-md font-medium outline-dashed outline-light">
+              {selectedWord}
             </p>
             <p
               className="text-center text-base text-[#efefef]"
@@ -89,17 +94,17 @@ export function Modal({
             </p>
           </div>
 
-          <div className="flex items-center justify-center space-x-2 rounded-b border-t border-gray-600 p-6">
+          <div className="border-gray-600 flex items-center justify-center space-x-2 rounded-b border-t p-6">
             <button
               type="button"
               onClick={handleCopyResult}
-              className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
+              className="text-white rounded-lg bg-medium px-5 py-2.5 text-center text-sm font-bold hover:bg-light focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
             >
               Copy Result
             </button>
             <button
               type="button"
-              className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
+              className="text-white rounded-lg bg-medium px-5 py-2.5 text-center text-sm font-bold hover:bg-light focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
               onClick={onReset}
             >
               Reset Game

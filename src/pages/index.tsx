@@ -7,6 +7,12 @@ import Head from "next/head";
 import { Modal } from "~/components/gameCompletedModal";
 import { LetterState, type WordleLetter } from "~/types/wordleTypes";
 
+import { FaSync, FaShare } from "react-icons/fa";
+import {
+  copyStringToClipboard,
+  generateChallengeLink,
+} from "~/helpers/stringHelpers";
+
 export default function Home() {
   const router = useRouter();
   const NUM_COLS = 5;
@@ -23,6 +29,7 @@ export default function Home() {
   const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
   const [selectedWord, setSelectedWord] = useState<string>("");
   const [completed, setCompleted] = useState<boolean>(false);
+  const [answeredCorrectly, setAnsweredCorrectly] = useState<boolean>(false);
   const [isGameCompletedModalVisible, setGameCompletedModalVisible] =
     useState(false);
   const [cursor, setCursor] = useState<{ row: number; col: number }>(
@@ -132,13 +139,13 @@ export default function Home() {
 
         newGrid[cursor.row] = newRow;
 
-        const isCompleted = newRow.every(
+        const isCorrectAnswer = newRow.every(
           (letter) => letter.state === LetterState.CORRECT,
         );
 
-        setCompleted(isCompleted);
-
-        if (isCompleted) {
+        if (isCorrectAnswer || cursor.row === grid.length - 1) {
+          setCompleted(true);
+          setAnsweredCorrectly(isCorrectAnswer);
           setGameCompletedModalVisible(true);
         } else {
           setCursor({ row: cursor.row + 1, col: 0 });
@@ -198,7 +205,7 @@ export default function Home() {
 
     if (
       column === grid[0]!.length - 1 &&
-      row < grid.length - 1 &&
+      row < grid.length &&
       grid[row]![column]!.letter !== ""
     ) {
       handleGuessSubmission();
@@ -254,7 +261,7 @@ export default function Home() {
 
   const focusCursor = useCallback(() => {
     const { row, col } = cursor;
-      setSelectedCell({ row, col });
+    setSelectedCell({ row, col });
   }, [cursor]);
 
   useEffect(() => {
@@ -310,13 +317,32 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main
-        className="justify-top from-dark to-dark_accent flex h-screen flex-col items-center overflow-scroll bg-gradient-to-b"
+        className="justify-top flex h-screen flex-col items-center overflow-scroll bg-gradient-to-b from-dark to-dark_accent"
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="justify-top container flex h-screen max-w-lg flex-col items-center gap-4 p-4">
-          <h1 className="text-medium font-mono text-2xl font-bold tracking-tight">
-            wordle ∞
-          </h1>
+          <div className="relative flex w-full flex-row items-center justify-center px-8">
+            <h1 className="font-mono text-2xl font-bold tracking-tight text-medium">
+              wordle ∞
+            </h1>
+            <div className="absolute right-8 flex flex-row items-center gap-2">
+              <button
+                className="rounded-lg bg-medium p-2 font-bold tracking-tight text-dark hover:bg-light"
+                onClick={resetGame}
+              >
+                <FaSync />
+              </button>
+              <button
+                className="rounded-lg bg-medium p-2 font-bold tracking-tight text-dark hover:bg-light"
+                onClick={() =>
+                  copyStringToClipboard(generateChallengeLink(selectedWord))
+                }
+              >
+                <FaShare />
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-rows-6 gap-2 px-8">
             {grid.map((row, rowIdx) => (
               <div key={rowIdx} className="grid grid-cols-5 gap-2">
@@ -414,6 +440,7 @@ export default function Home() {
               selectedWord={selectedWord}
               grid={grid}
               score={cursor.row + 1}
+              success={answeredCorrectly}
             />
           )}
         </div>
