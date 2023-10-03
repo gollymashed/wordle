@@ -382,10 +382,10 @@ export default function Home() {
             </div>
             <div className="keyboard-row">
               <button
-                className="key enter-key bg-medium"
-                onClick={enterHandler}
+                className="key backspace-key bg-medium"
+                onClick={backspaceHandler}
               >
-                ↵
+                &larr;
               </button>
               {"ZXCVBNM".split("").map((letter) => (
                 <button
@@ -400,10 +400,10 @@ export default function Home() {
                 </button>
               ))}
               <button
-                className="key backspace-key bg-medium"
-                onClick={backspaceHandler}
+                className="key enter-key bg-medium"
+                onClick={enterHandler}
               >
-                &larr;
+                ↵
               </button>
             </div>
           </div>
