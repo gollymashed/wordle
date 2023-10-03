@@ -317,7 +317,7 @@ export default function Home() {
           <h1 className="text-medium font-mono text-2xl font-bold tracking-tight">
             wordle ∞
           </h1>
-          <div className="grid grid-rows-6 gap-2 px-16 lg:px-6">
+          <div className="grid grid-rows-6 gap-2 px-8">
             {grid.map((row, rowIdx) => (
               <div key={rowIdx} className="grid grid-cols-5 gap-2">
                 {row.map((cell, colIdx) => (
