@@ -4,20 +4,11 @@ import wordleWords from "../content/wordleWords";
 import wordleAnswers from "../content/wordleAnswers";
 
 import Head from "next/head";
+import { Modal } from "~/components/gameCompletedModal";
+import { LetterState, type WordleLetter } from "~/types/wordleTypes";
 
 export default function Home() {
   const router = useRouter();
-  // Grid state
-  enum LetterState {
-    NONE = 0,
-    INCORRECT = 1,
-    POSITION = 2,
-    CORRECT = 3,
-  }
-  type WordleLetter = {
-    letter: string;
-    state: LetterState;
-  };
   const NUM_COLS = 5;
   const NUM_ROWS = 6;
   const INITIAL_GRID = Array.from({ length: NUM_ROWS }, () =>
@@ -29,12 +20,11 @@ export default function Home() {
   const INITIAL_CURSOR = useMemo(() => ({ row: 0, col: 0 }), []);
 
   const [grid, setGrid] = useState<WordleLetter[][]>(INITIAL_GRID);
-
+  const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
   const [selectedWord, setSelectedWord] = useState<string>("");
-
   const [completed, setCompleted] = useState<boolean>(false);
-  const [isCompleteModalVisible, setCompleteModalVisible] = useState(false);
-
+  const [isGameCompletedModalVisible, setGameCompletedModalVisible] =
+    useState(false);
   const [cursor, setCursor] = useState<{ row: number; col: number }>(
     INITIAL_CURSOR,
   );
@@ -81,11 +71,10 @@ export default function Home() {
           return newGrid;
         }
 
-        console.log("Invalid row or column");
         return prevGrid;
       });
     },
-    [LetterState],
+    [],
   );
 
   const insertLetterAndMoveCursor = useCallback(
@@ -104,22 +93,6 @@ export default function Home() {
     },
     [grid, handleChange],
   );
-
-  const handleBackspace = useCallback(() => {
-    if (completed) return;
-
-    const { row, col: column } = cursor;
-
-    if (grid[row]![column]!.letter !== "") {
-      handleChange(row, column, "");
-      return;
-    }
-
-    if (column > 0) {
-      handleChange(row, column - 1, "");
-      setCursor({ row, col: column - 1 });
-    }
-  }, [cursor, handleChange, grid, completed]);
 
   const handleGuessSubmission = useCallback(() => {
     const currentGuess = grid[cursor.row]!.map((letter) => letter.letter).join(
@@ -166,7 +139,7 @@ export default function Home() {
         setCompleted(isCompleted);
 
         if (isCompleted) {
-          setCompleteModalVisible(true);
+          setGameCompletedModalVisible(true);
         } else {
           setCursor({ row: cursor.row + 1, col: 0 });
         }
@@ -190,7 +163,33 @@ export default function Home() {
       });
       setCursor({ row: cursor.row, col: 0 });
     }
-  }, [cursor, grid, words, LetterState, selectedWord]);
+  }, [cursor, grid, words, selectedWord]);
+
+  const backspaceHandler = (event: React.MouseEvent | React.TouchEvent) => {
+    event.preventDefault(); // Prevent default to avoid any double firing
+    handleBackspace();
+  };
+
+  const handleBackspace = useCallback(() => {
+    if (completed) return;
+
+    const { row, col: column } = cursor;
+
+    if (grid[row]![column]!.letter !== "") {
+      handleChange(row, column, "");
+      return;
+    }
+
+    if (column > 0) {
+      handleChange(row, column - 1, "");
+      setCursor({ row, col: column - 1 });
+    }
+  }, [cursor, handleChange, grid, completed]);
+
+  const enterHandler = (event: React.MouseEvent | React.TouchEvent) => {
+    event.preventDefault();
+    handleEnter();
+  };
 
   const handleEnter = useCallback(() => {
     if (completed) return;
@@ -206,14 +205,23 @@ export default function Home() {
     }
   }, [cursor, grid, completed, handleGuessSubmission]);
 
-  const handleLetterClick = useCallback(
+  const performLetterAction = useCallback(
     (letter: string) => {
       const { row, col: column } = cursor;
       if (row < grid.length && column < grid[0]!.length) {
         insertLetterAndMoveCursor(row, column, letter);
       }
     },
-    [cursor, grid, insertLetterAndMoveCursor],
+    [cursor, insertLetterAndMoveCursor, grid],
+  );
+
+  const letterHandler = useCallback(
+    (event: React.MouseEvent | React.TouchEvent) => {
+      event.preventDefault();
+      const letter = event.currentTarget.textContent ?? "";
+      performLetterAction(letter);
+    },
+    [performLetterAction],
   );
 
   useEffect(() => {
@@ -246,8 +254,8 @@ export default function Home() {
 
   const focusCursor = useCallback(() => {
     const { row, col } = cursor;
-    inputsRef.current[row * grid[0]!.length + col]?.focus();
-  }, [cursor, grid]);
+      setSelectedCell({ row, col });
+  }, [cursor]);
 
   useEffect(() => {
     focusCursor();
@@ -260,13 +268,13 @@ export default function Home() {
   function getBgClassByState(state: LetterState) {
     switch (state) {
       case LetterState.NONE:
-        return "bg-[#CDACFA]";
+        return "bg-light";
       case LetterState.CORRECT:
-        return "bg-green-500";
+        return "bg-green";
       case LetterState.POSITION:
-        return "bg-yellow-500";
+        return "bg-orange";
       case LetterState.INCORRECT:
-        return "bg-gray-500";
+        return "bg-red";
       default:
         return "";
     }
@@ -286,151 +294,12 @@ export default function Home() {
     return highestState;
   }
 
-  const generateResultString = () => {
-    const score = cursor.row + 1;
-    let resultString = `Wordle ∞ ${score}/6\n\n`; // replace XXX and X/X with actual game number and score.
-    for (let i = 0; i < score; i++) {
-      if (grid[i] === undefined) break;
-      let rowString = "";
-      grid[i]!.forEach((wordleLetter) => {
-        switch (wordleLetter.state) {
-          case LetterState.CORRECT:
-            rowString += "🟩";
-            break;
-          case LetterState.POSITION:
-            rowString += "🟨";
-            break;
-          case LetterState.INCORRECT:
-            rowString += "🟥";
-            break;
-          default:
-            rowString += "⬜";
-            break;
-        }
-      });
-      resultString += rowString + "\n";
-    }
-    return resultString;
-  };
-
-  const copyStringToClipboard = (string: string) => {
-    const el = document.createElement("textarea");
-    el.value = string;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand("copy");
-    document.body.removeChild(el);
-  };
-
-  const generateChallengeLink = () => {
-    const obfuscatedWord = btoa(selectedWord);
-    const url = `${window.location.origin}${window.location.pathname}?challenge=${obfuscatedWord}`;
-    console.log(url);
-    return url;
-  };
-
-  function Modal({ onReset }: { onReset: () => void; onClose: () => void }) {
-    const handleCopyResult = () => {
-      const url = generateChallengeLink();
-      const resultString =
-        generateResultString() + "\n" + "Try and beat my score: " + url;
-      copyStringToClipboard(resultString); // copy to clipboard
-    };
-
-    const handleCopyChallengeLink = () => {
-      const url = generateChallengeLink();
-      copyStringToClipboard(url); // copy to clipboard
-    };
-
-    return (
-      <div
-        id="defaultModal"
-        aria-hidden="false"
-        className="fixed bottom-0 left-0 right-0 top-0 z-50 flex items-center justify-center"
-      >
-        <div className="relative max-h-full w-full max-w-2xl px-4">
-          <div className="relative rounded-lg bg-[#2D2F52] shadow">
-            <div className="flex items-start justify-between rounded-t border-b border-gray-600 p-4">
-              <h3 className="text-xl font-semibold text-[#D9D9D9]">
-                Game Completed!
-              </h3>
-              <button
-                type="button"
-                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white"
-                onClick={() => setCompleteModalVisible(false)}
-              >
-                <svg
-                  className="h-3 w-3"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 14 14"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                  />
-                </svg>
-                <span className="sr-only">Close modal</span>
-              </button>
-            </div>
-            <div className="flex flex-col items-center justify-center space-y-6 p-6">
-              <p className="text-center text-base leading-relaxed text-[#efefef]">
-                You got it!
-                <br />
-                Would you like to play again?
-              </p>
-              <p
-                className="text-center text-base text-[#efefef]"
-                style={{ whiteSpace: "pre-line" }}
-              >
-                {generateResultString()}
-              </p>
-              <p
-                className="cursor-copy text-center text-xs text-[#c0c0c0] hover:text-[#939393]"
-                onClick={handleCopyChallengeLink}
-              >
-                {generateChallengeLink()}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center space-x-2 rounded-b border-t border-gray-600 p-6">
-              <button
-                type="button"
-                onClick={handleCopyResult}
-                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
-              >
-                Copy Result
-              </button>
-              {/* <button
-                onClick={handleCopyChallengeLink}
-                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
-              >
-                Copy Challenge Link
-              </button> */}
-              <button
-                type="button"
-                className="rounded-lg bg-[#7729FF] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#CDACFA] focus:outline-none focus:ring-4 focus:ring-[#CDACFA]"
-                onClick={onReset}
-              >
-                Reset Game
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const resetGame = useCallback(() => {
     setGrid(INITIAL_GRID);
     setCursor(INITIAL_CURSOR);
     setRandomWord(wordleAnswers);
     setCompleted(false);
-    setCompleteModalVisible(false);
+    setGameCompletedModalVisible(false);
   }, [INITIAL_GRID, INITIAL_CURSOR, setRandomWord]);
 
   return (
@@ -441,34 +310,44 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main
-        className="justify-top flex min-h-screen flex-col items-center bg-gradient-to-b from-[#0D0707] to-[#15162c]"
+        className="justify-top from-dark to-dark_accent flex h-screen flex-col items-center overflow-scroll bg-gradient-to-b"
         onMouseDown={(e) => e.preventDefault()}
       >
-        <div className="container flex flex-col items-center justify-center gap-6 px-4 py-6 ">
-          <h1 className="font-mono text-2xl font-bold tracking-tight text-[#7729FF]">
+        <div className="justify-top container flex h-screen max-w-lg flex-col items-center gap-4 p-4">
+          <h1 className="text-medium font-mono text-2xl font-bold tracking-tight">
             wordle ∞
           </h1>
-          <div className="grid grid-cols-5 grid-rows-6 gap-2">
-            {grid.map((row, rowIdx) =>
-              row.map((cell, colIdx) => (
-                <input
-                  key={`${rowIdx}-${colIdx}`}
-                  ref={(el) =>
-                    (inputsRef.current[rowIdx * grid[0]!.length + colIdx] = el)
-                  }
-                  className={`cell ${getBgClassByState(cell.state)}`}
-                  maxLength={1}
-                  value={cell.letter}
-                  onChange={(e) => handleChange(rowIdx, colIdx, e.target.value)}
-                  readOnly
-                  tabIndex={-1}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                />
-              )),
-            )}
+          <div className="grid grid-rows-6 gap-2 px-16 lg:px-6">
+            {grid.map((row, rowIdx) => (
+              <div key={rowIdx} className="grid grid-cols-5 gap-2">
+                {row.map((cell, colIdx) => (
+                  <input
+                    key={`${rowIdx}-${colIdx}`}
+                    ref={(el) =>
+                      (inputsRef.current[rowIdx * grid[0]!.length + colIdx] =
+                        el)
+                    }
+                    className={`cell ${
+                      rowIdx === selectedCell?.row &&
+                      colIdx === selectedCell?.col
+                        ? "selected"
+                        : ""
+                    } ${getBgClassByState(cell.state)}`}
+                    maxLength={1}
+                    value={cell.letter}
+                    onChange={(e) =>
+                      handleChange(rowIdx, colIdx, e.target.value)
+                    }
+                    readOnly
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
           <div className="keyboard">
             <div className="keyboard-row">
@@ -478,29 +357,33 @@ export default function Home() {
                   className={`key ${getBgClassByState(
                     findHighestStateForLetter(letter),
                   )}`}
-                  onClick={() => handleLetterClick(letter)}
+                  onClick={letterHandler}
+                  onTouchEnd={letterHandler}
                 >
                   {letter}
                 </button>
               ))}
             </div>
             <div className="keyboard-row">
+              <div className="flex-1"></div>
               {"ASDFGHJKL".split("").map((letter) => (
                 <button
                   key={letter}
                   className={`key ${getBgClassByState(
                     findHighestStateForLetter(letter),
                   )}`}
-                  onClick={() => handleLetterClick(letter)}
+                  onClick={letterHandler}
+                  onTouchEnd={letterHandler}
                 >
                   {letter}
                 </button>
               ))}
+              <div className="flex-1"></div>
             </div>
             <div className="keyboard-row">
               <button
-                className="key enter-key bg-[#7729FF]"
-                onClick={() => handleEnter()}
+                className="key enter-key bg-medium"
+                onClick={enterHandler}
               >
                 ↵
               </button>
@@ -510,23 +393,27 @@ export default function Home() {
                   className={`key ${getBgClassByState(
                     findHighestStateForLetter(letter),
                   )}`}
-                  onClick={() => handleLetterClick(letter)}
+                  onClick={letterHandler}
+                  onTouchEnd={letterHandler}
                 >
                   {letter}
                 </button>
               ))}
               <button
-                className="key backspace-key bg-[#7729FF]"
-                onClick={() => handleBackspace()}
+                className="key backspace-key bg-medium"
+                onClick={backspaceHandler}
               >
                 &larr;
               </button>
             </div>
           </div>
-          {isCompleteModalVisible && (
+          {isGameCompletedModalVisible && (
             <Modal
-              onClose={() => setCompleteModalVisible(false)}
+              onClose={() => setGameCompletedModalVisible(false)}
               onReset={resetGame}
+              selectedWord={selectedWord}
+              grid={grid}
+              score={cursor.row + 1}
             />
           )}
         </div>

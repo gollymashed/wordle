@@ -3,44 +3,59 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: 'JetBrainsMono';
-  font-style:  normal;
+  font-family: "JetBrainsMono";
+  font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+  src: url("/fonts/JetBrainsMono-Bold.woff2") format("woff2");
 }
 
 @font-face {
-  font-family: 'JetBrainsMono';
-  font-style:  normal;
+  font-family: "JetBrainsMono";
+  font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
 }
 
 .cell {
   display: grid;
-  width:3rem;
-  height:3rem;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   text-align: center;
+  border-radius: 0.4rem;
+  font-family: "JetBrainsMono", monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.cell.selected {
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px green; 
 }
 
 .key {
   display: inline-block;
-  width: 2rem;
-  height: 3rem;
-  line-height: 2rem;
+  flex: 2;
   text-align: center;
   margin: 0.1rem;
   cursor: pointer;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.4rem;
+  font-family: "JetBrainsMono", monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
 }
 
-.enter-key, .backspace-key {
-  width: 3rem; /* 1.5x width */
+.enter-key,
+.backspace-key {
+  flex: 3;
+  aspect-ratio: 0;
 }
 
 .keyboard {
   display: flex;
+  width: 100%;
   flex-direction: column;
   gap: 0.1rem;
   bg-color: #fff;
@@ -48,6 +63,6 @@
 
 .keyboard-row {
   display: flex;
-  gap:0.1rem;
+  gap: 0.1rem;
   justify-content: center;
 }
